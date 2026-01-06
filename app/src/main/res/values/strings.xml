@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">focus guardian</string>
+    <string name="accessibility_service_description">Focus Guardian needs accessibility permission to monitor your screen content and block unwanted notifications and videos.</string>
+</resources>
