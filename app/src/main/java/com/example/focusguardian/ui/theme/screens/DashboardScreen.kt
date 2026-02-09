@@ -12,13 +12,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import androidx.navigation.NavController
 import com.example.focusguardian.navigation.Routes
 import com.example.focusguardian.viewmodel.AppUsageViewModel
@@ -26,6 +30,19 @@ import com.example.focusguardian.viewmodel.AppUsageViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController, appUsageViewModel: AppUsageViewModel) {
+    val context = LocalContext.current
+    val hasUsageAccess = appUsageViewModel.hasUsageAccess(context)
+
+    LaunchedEffect(Unit) {
+        appUsageViewModel.loadAlerts(context)
+    }
+
+    LaunchedEffect(hasUsageAccess) {
+        while (true) {
+            appUsageViewModel.refreshUsageTimes(context)
+            delay(30000)
+        }
+    }
     val totalDailyLimitMinutes = appUsageViewModel.totalDailyLimitMinutes
     val totalTimeUsedMinutes = appUsageViewModel.totalTimeUsedMinutes
 
@@ -35,32 +52,47 @@ fun DashboardScreen(navController: NavController, appUsageViewModel: AppUsageVie
     val timeUsedHours = totalTimeUsedMinutes / 60
     val timeUsedMinutes = totalTimeUsedMinutes % 60
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Dashboard") },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Routes.PROFILE_SETTINGS) }) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile Settings")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .background(Color(0xFFF7F8FC))
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Dashboard",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { navController.navigate(Routes.PROFILE_SETTINGS) }) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Profile Settings",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
 
-            Text("Welcome back,", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "Welcome back,",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
             Text(
                 "Here’s your daily digital wellness overview",
                 fontSize = 13.sp,
-                color = Color.Black // Changed from Gray to Black for better visibility
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(16.dp))
@@ -70,8 +102,37 @@ fun DashboardScreen(navController: NavController, appUsageViewModel: AppUsageVie
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                DashboardCard(Icons.Default.Schedule, "${dailyLimitHours}h ${dailyLimitMinutes}m", "Daily Limit", Color(0xFF4C6EF5))
-                DashboardCard(Icons.Default.TrendingUp, "${timeUsedHours}h ${timeUsedMinutes}m", "Time Used", Color(0xFF2ECC71))
+                DashboardCard(
+                    Icons.Default.Schedule,
+                    "${dailyLimitHours}h ${dailyLimitMinutes}m",
+                    "Daily Limit",
+                    Color(0xFF4C6EF5)
+                ) {
+                    navController.navigate(Routes.MANAGE_APPS)
+                }
+                DashboardCard(
+                    Icons.Default.TrendingUp,
+                    "${timeUsedHours}h ${timeUsedMinutes}m",
+                    "Time Used",
+                    Color(0xFF2ECC71)
+                ) {
+                    if (!hasUsageAccess) {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        )
+                    } else {
+                        navController.navigate(Routes.TIME_USED)
+                    }
+                }
+            }
+
+            if (!hasUsageAccess) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Grant Usage Access to show Time Used",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -82,7 +143,7 @@ fun DashboardScreen(navController: NavController, appUsageViewModel: AppUsageVie
             ) {
                 DashboardCard(
                     icon = Icons.Default.Notifications,
-                    value = "3",
+                    value = appUsageViewModel.smartAlerts.size.toString(),
                     label = "Smart Alerts",
                     iconBackgroundColor = Color(0xFF9B59B6),
                     onClick = { navController.navigate(Routes.NOTIFICATIONS) }
@@ -94,7 +155,12 @@ fun DashboardScreen(navController: NavController, appUsageViewModel: AppUsageVie
 
             Spacer(Modifier.height(20.dp))
 
-            Text("Quick Access", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+            Text(
+                "Quick Access",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
             Spacer(Modifier.height(12.dp))
 
@@ -146,7 +212,7 @@ private fun RowScope.DashboardCard(
             .weight(1f)
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -161,8 +227,13 @@ private fun RowScope.DashboardCard(
                 Icon(icon, contentDescription = label, tint = Color.White)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(value, fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
-            Text(label, fontSize = 14.sp, color = Color.Gray)
+            Text(
+                value,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 18.sp
+            )
+            Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -180,7 +251,7 @@ private fun QuickAccessItem(
             .padding(vertical = 6.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -190,17 +261,24 @@ private fun QuickAccessItem(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        RoundedCornerShape(12.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = title, tint = Color.Black)
+                Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, color = Color.Black)
-                Text(subtitle, fontSize = 12.sp, color = Color.Gray)
+                Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.Gray)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

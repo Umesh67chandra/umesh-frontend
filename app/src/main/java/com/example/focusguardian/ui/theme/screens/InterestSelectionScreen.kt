@@ -15,10 +15,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.focusguardian.R
+import com.example.focusguardian.viewmodel.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterestSelectionScreen(
+    userViewModel: UserViewModel,
     onBack: () -> Unit,
     onContinue: (Set<String>) -> Unit
 ) {
@@ -98,7 +100,10 @@ fun InterestSelectionScreen(
                         Text("Back")
                     }
                     Button(
-                        onClick = { onContinue(selectedInterests) }, 
+                        onClick = {
+                            userViewModel.updateInterests(selectedInterests)
+                            onContinue(selectedInterests)
+                        },
                         modifier = Modifier.weight(1f),
                         enabled = selectedInterests.isNotEmpty()
                     ) {

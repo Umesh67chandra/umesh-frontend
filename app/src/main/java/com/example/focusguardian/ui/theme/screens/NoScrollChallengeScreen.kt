@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -12,9 +12,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import kotlinx.coroutines.delay
 
 @Composable
-fun NoScrollChallengeScreen() {
+fun NoScrollChallengeScreen(navController: NavController) {
+    val totalSeconds = 30 * 60
+    var remainingSeconds by remember { mutableStateOf(totalSeconds) }
+    var isRunning by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isRunning) {
+        while (isRunning && remainingSeconds > 0) {
+            delay(1000)
+            remainingSeconds -= 1
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -58,7 +70,7 @@ fun NoScrollChallengeScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "29m 54s",
+                    text = formatDuration(remainingSeconds),
                     color = Color.White,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
@@ -74,7 +86,10 @@ fun NoScrollChallengeScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 OutlinedButton(
-                    onClick = { },
+                    onClick = {
+                        isRunning = false
+                        navController.popBackStack()
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color.White
                     ),
@@ -85,4 +100,10 @@ fun NoScrollChallengeScreen() {
             }
         }
     }
+}
+
+private fun formatDuration(seconds: Int): String {
+    val mins = seconds / 60
+    val secs = seconds % 60
+    return "${mins}m ${secs.toString().padStart(2, '0')}s"
 }

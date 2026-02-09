@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "name": "Test User",
+      "email": "test@example.com",
+      "_id": "69837b3c6817a956438aafd5"
+    },
+    {
+      "email": "test@test.com",
+      "role": "parent",
+      "name": "Test Parent",
+      "child_ids": [],
+      "password_hash": "scrypt:32768:8:1$L9u8Xcpoaa14ZajI$4abef3bd1c6cd9df8b725c6e152a4f359abe031a4ee896c7797c91465eabc5f8264a0d5379043fc8b1ce0298a61e8bf3a9a222b0e1fdc61a0f8caba3debf63c3",
+      "_id": "69837b5d09af54ef14a1af5e"
+    }
+  ]
+}

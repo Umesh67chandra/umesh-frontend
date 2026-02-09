@@ -24,7 +24,7 @@ fun AppMenuDrawer(
 ) {
     ModalDrawerSheet(
         modifier = Modifier.width(280.dp),
-        drawerContainerColor = Color.White // Set background to white
+        drawerContainerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -41,15 +41,19 @@ fun AppMenuDrawer(
                     text = "Menu",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black // Ensure heading is visible
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(onClick = closeDrawer) {
-                    Icon(Icons.Default.Close, contentDescription = "Close Menu")
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close Menu",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color.LightGray)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             Spacer(Modifier.height(16.dp))
 
             MenuItem(Icons.Default.Dashboard, "Dashboard") {
@@ -83,7 +87,7 @@ fun AppMenuDrawer(
             }
 
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color.LightGray)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             Spacer(Modifier.height(16.dp))
 
             MenuItem(Icons.Default.Wallpaper, "Wallpaper") {
@@ -100,13 +104,13 @@ fun AppMenuDrawer(
             }
 
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color.LightGray)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             Spacer(Modifier.height(16.dp))
 
             MenuItem(
                 icon = Icons.Default.ExitToApp,
                 title = "Sign Out",
-                textColor = Color.Red
+                textColor = MaterialTheme.colorScheme.error
             ) {
                 navController.navigate(Routes.LOGIN)
                 closeDrawer()
@@ -119,7 +123,7 @@ fun AppMenuDrawer(
 private fun MenuItem(
     icon: ImageVector,
     title: String,
-    textColor: Color = Color.Black,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     Row(

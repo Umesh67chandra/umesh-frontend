@@ -20,6 +20,7 @@ fun AuthNavGraph(navController: NavHostController, userViewModel: UserViewModel)
 
         composable(AuthRoutes.LOGIN) {
             LoginScreen(
+                userViewModel = userViewModel,
                 onSignIn = { navController.navigate(AuthRoutes.CHOOSE_ROLE) },
                 onCreateAccount = { navController.navigate(AuthRoutes.SIGN_UP) }
             )
@@ -28,6 +29,7 @@ fun AuthNavGraph(navController: NavHostController, userViewModel: UserViewModel)
         composable(AuthRoutes.CHOOSE_ROLE) {
             ChooseYourRoleScreen(
                 navController = navController,
+                userViewModel = userViewModel,
                 onRoleSelected = { role ->
                     when (role) {
                         "child" -> navController.navigate(AuthRoutes.CHILD_INTERESTS)

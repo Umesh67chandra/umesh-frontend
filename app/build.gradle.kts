@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// DEBUG: log SDK env and local.properties to help diagnose SDK path issues
+println("[DEBUG] ANDROID_SDK_ROOT=" + System.getenv("ANDROID_SDK_ROOT"))
+println("[DEBUG] ANDROID_HOME=" + System.getenv("ANDROID_HOME"))
+try {
+    val lp = rootProject.file("local.properties")
+    if (lp.exists()) println("[DEBUG] local.properties: " + lp.readText())
+} catch (e: Exception) {
+    println("[DEBUG] failed reading local.properties: " + e.message)
+}
+
 android {
     namespace = "com.example.focusguardian"
     compileSdk {
@@ -16,6 +26,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "SUPABASE_URL", "\"https://jdatkdmztxzpkhqcmbnt.supabase.co/\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYXRrZG16dHh6cGtocWNtYm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyNjU1MzIsImV4cCI6MjA4NTg0MTUzMn0.VtarcCXnWl7F7aYrBX0qW08RNPQNueef13CPWLcp1Q0\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

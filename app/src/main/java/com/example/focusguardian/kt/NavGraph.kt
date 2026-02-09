@@ -35,6 +35,7 @@ fun AppNavGraph(
 
         composable(Routes.LOGIN) {
             LoginScreen(
+                userViewModel = userViewModel,
                 onSignIn = {
                     // After signing in, if the role is not set, go to role selection.
                     // Otherwise, go to the main dashboard.
@@ -71,8 +72,8 @@ fun AppNavGraph(
         composable(Routes.ROLE) {
             ChooseYourRoleScreen(
                 navController = navController,
+                userViewModel = userViewModel,
                 onRoleSelected = {
-                    userViewModel.role = it
                     // After selecting a role, go to interest selection.
                     navController.navigate(Routes.INTEREST)
                 },
@@ -82,6 +83,7 @@ fun AppNavGraph(
 
         composable(Routes.INTEREST) {
             InterestSelectionScreen(
+                userViewModel = userViewModel,
                 onBack = { navController.popBackStack() },
                 onContinue = { interests: Set<String> ->
                     // After selecting interests, go to refine interests.
@@ -95,6 +97,7 @@ fun AppNavGraph(
             val interests = backStackEntry.arguments?.getString("interests")?.split(",") ?: emptyList()
             RefineYourInterestsScreen(
                 interests = interests,
+                userViewModel = userViewModel,
                 onBack = { navController.popBackStack() },
                 onContinue = {
                     // After refining interests, the onboarding is complete. Go to the login screen.
@@ -121,10 +124,13 @@ fun AppNavGraph(
                 ChallengesScreen(navController)
             }
             composable(Routes.ANALYTICS) {
-                AnalyticsScreen(navController)
+                AnalyticsScreen(navController, appUsageViewModel)
+            }
+            composable(Routes.TIME_USED) {
+                TimeUsedScreen(navController)
             }
             composable(Routes.NOTIFICATIONS) {
-                NotificationsScreen(navController)
+                NotificationsScreen(navController, appUsageViewModel)
             }
             composable(Routes.WALLPAPER) {
                 SmartWallpaperScreen()
@@ -133,13 +139,13 @@ fun AppNavGraph(
                 ProfileSettingsScreen(navController, userViewModel = userViewModel)
             }
             composable(Routes.NO_SCROLL) {
-                NoScrollChallengeScreen()
+                NoScrollChallengeScreen(navController)
             }
             composable(Routes.DEEP_FOCUS) {
-                DeepFocusChallengeScreen()
+                DeepFocusChallengeScreen(navController)
             }
             composable(Routes.EARLY_SLEEP) {
-                EarlySleepChallengeScreen()
+                EarlySleepChallengeScreen(navController)
             }
             composable(Routes.FIRST_STEP_BADGE) {
                 FirstStepBadgeScreen(navController)

@@ -20,14 +20,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.focusguardian.viewmodel.UserViewModel
 
 @Composable
 fun RefineYourInterestsScreen(
     interests: List<String>,
+    userViewModel: UserViewModel,
     onBack: () -> Unit,
     onContinue: (Set<String>) -> Unit
 ) {
     var selectedSubCategories by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -90,12 +94,32 @@ fun RefineYourInterestsScreen(
                         Text("Back")
                     }
                     Button(
-                        onClick = { onContinue(selectedSubCategories) },
+                        onClick = {
+                            isLoading = true
+                            errorMessage = null
+                            userViewModel.savePreferences(selectedSubCategories) { success, message ->
+                                isLoading = false
+                                if (success) {
+                                    onContinue(selectedSubCategories)
+                                } else {
+                                    errorMessage = message ?: "Failed to save preferences"
+                                }
+                            }
+                        },
                         modifier = Modifier.weight(1f),
-                        enabled = selectedSubCategories.isNotEmpty()
+                        enabled = selectedSubCategories.isNotEmpty() && !isLoading
                     ) {
-                        Text("Finish")
+                        Text(if (isLoading) "Saving..." else "Finish")
                     }
+                }
+
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = errorMessage ?: "",
+                        color = Color(0xFFD32F2F),
+                        fontSize = 13.sp
+                    )
                 }
             }
         }

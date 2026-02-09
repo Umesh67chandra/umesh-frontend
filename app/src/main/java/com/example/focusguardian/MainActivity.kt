@@ -114,15 +114,7 @@ class MainActivity : ComponentActivity() {
                                         BottomNavigationBar(navController)
                                     }
                                 },
-                                floatingActionButton = {
-                                    if (showBottomBar) {
-                                        FloatingActionButton(
-                                            onClick = { /* TODO */ }
-                                        ) {
-                                            Icon(Icons.Default.Add, contentDescription = "Add")
-                                        }
-                                    }
-                                }
+                                floatingActionButton = {}
                             ) { paddingValues ->
                                 AppNavGraph(
                                     navController = navController,

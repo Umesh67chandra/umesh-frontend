@@ -7,6 +7,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,21 +21,30 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.focusguardian.viewmodel.AppUsageViewModel
+import com.example.focusguardian.viewmodel.AddictionMetrics
+import com.example.focusguardian.viewmodel.DailyUsage
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsageViewModel = viewModel()) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasUsageAccess = appUsageViewModel.hasUsageAccess(context)
+    var metrics by remember { mutableStateOf<AddictionMetrics?>(null) }
+    var trend by remember { mutableStateOf<List<DailyUsage>>(emptyList()) }
 
-    val totalTimeUsed = appUsageViewModel.totalTimeUsedMinutes.toFloat()
-    val totalLimit = appUsageViewModel.totalDailyLimitMinutes.toFloat()
-
-    val score = if (totalLimit > 0) {
-        (totalTimeUsed / totalLimit).coerceIn(0f, 1f)
-    } else {
-        0f
+    LaunchedEffect(hasUsageAccess) {
+        if (hasUsageAccess) {
+            while (true) {
+                metrics = appUsageViewModel.getAddictionMetrics(context)
+                trend = appUsageViewModel.getUsageTrend(context)
+                delay(60000)
+            }
+        }
     }
 
-    val scorePercentage = (score * 100).toInt()
+    val scorePercentage = metrics?.scorePercent ?: 0
+    val scoreProgress = scorePercentage / 100f
 
     val scoreColor = when {
         scorePercentage <= 33 -> Color(0xFF22C55E) // Green
@@ -41,7 +55,7 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F8FC))
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -50,13 +64,13 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
             text = "Addiction Score",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = "Detailed breakdown of your digital habits and health metrics",
             fontSize = 13.sp,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -64,7 +78,8 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
         // SCORE CARD
         Card(
             shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) { 
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -72,7 +87,7 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        progress = { score },
+                        progress = { scoreProgress },
                         modifier = Modifier.size(120.dp),
                         color = scoreColor,
                         strokeWidth = 8.dp
@@ -84,16 +99,32 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
                             fontWeight = FontWeight.Bold,
                             color = scoreColor
                         )
-                        Text("SCORE", color = Color.Black)
+                        Text("SCORE", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                ScoreRow("Scrolling", 38)
-                ScoreRow("Late Night", 11)
-                ScoreRow("Mood Drop", 30)
-                ScoreRow("Switching", 41)
+                if (!hasUsageAccess) {
+                    Text(
+                        text = "Grant Usage Access to calculate your score.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        )
+                    }) {
+                        Text("Open Usage Access")
+                    }
+                } else {
+                    ScoreRow("Scrolling", metrics?.scrollingPercent ?: 0)
+                    ScoreRow("Late Night", metrics?.lateNightPercent ?: 0)
+                    ScoreRow("Mood Drop", metrics?.moodDropPercent ?: 0)
+                    ScoreRow("Switching", metrics?.switchingPercent ?: 0)
+                }
             }
         }
 
@@ -102,16 +133,56 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
         // HISTORICAL TREND
         Card(
             shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text("Historical Trend", fontWeight = FontWeight.Bold, color = Color.Black)
-                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "6d ago   5d ago   4d ago   3d ago   2d ago   1d ago   Today",
-                    fontSize = 12.sp,
-                    color = Color.Black
+                    "Historical Trend",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                if (!hasUsageAccess) {
+                    Text(
+                        text = "Grant Usage Access to see your trend.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (trend.isEmpty()) {
+                    Text(
+                        text = "No usage data yet.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    trend.forEach { day ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                day.label,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "${day.minutes}m",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        LinearProgressIndicator(
+                            progress = { day.percent / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
             }
         }
 
@@ -122,16 +193,29 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFEFFDF4),
-                contentColor = Color.Black
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Tips for Improvement", fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(
+                    "Tips for Improvement",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("• Try to reduce late-night scrolling by enabling Sleep Block.", color = Color.Black)
-                Text("• Take frequent breaks to lower your scroll intensity.", color = Color.Black)
-                Text("• Focus on one app at a time to reduce switching fatigue.", color = Color.Black)
+                Text(
+                    "• Try to reduce late-night scrolling by enabling Sleep Block.",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "• Take frequent breaks to lower your scroll intensity.",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "• Focus on one app at a time to reduce switching fatigue.",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
@@ -142,17 +226,21 @@ fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsa
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF0F7FF),
-                contentColor = Color.Black
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("About this Score", fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(
+                    "About this Score",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Your addiction score is calculated based on scrolling intensity, late-night usage, mood impact, and app switching frequency. Lower scores indicate healthier digital habits.",
                     fontSize = 13.sp,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -166,15 +254,16 @@ private fun ScoreRow(label: String, percent: Int) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, color = Color.Black)
-            Text("$percent%", color = Color.Black)
+            Text(label, color = MaterialTheme.colorScheme.onSurface)
+            Text("$percent%", color = MaterialTheme.colorScheme.onSurface)
         }
         LinearProgressIndicator(
             progress = { percent / 100f },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp),
-            color = Color(0xFFFACC15)
+            color = MaterialTheme.colorScheme.tertiary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
     }

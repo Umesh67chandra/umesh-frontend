@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,7 +78,8 @@ fun SplashScreen(onTimeout: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.ic_focus_guardian_logo),
                 contentDescription = "App Logo",
-                modifier = Modifier.size(120.dp)
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(160.dp)
             )
             Text(
                 text = "Focus Guardian",
@@ -86,7 +88,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 color = Color.Black
             )
             Text(
-                text = "✨ Smart Social Media Awareness",
+                text = "Smart Social Media Awareness",
                 color = Color(0xFF6B5CFF),
                 fontSize = 16.sp
             )

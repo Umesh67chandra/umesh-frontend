@@ -1,5 +1,6 @@
 package com.example.focusguardian.ui.theme.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,22 +13,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.focusguardian.R
+import com.example.focusguardian.viewmodel.UserViewModel
 import java.util.Calendar
 
 @Composable
 fun LoginScreen(
+    userViewModel: UserViewModel,
     onSignIn: () -> Unit,
     onCreateAccount: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     if (showForgotPasswordDialog) {
         ForgotPasswordDialog(onDismiss = { showForgotPasswordDialog = false })
@@ -51,11 +57,11 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // LOGO
-        Icon(
+        Image(
             painter = painterResource(id = R.drawable.ic_focus_guardian_logo),
             contentDescription = "App Logo",
-            modifier = Modifier.size(80.dp),
-            tint = Color.Unspecified
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(120.dp)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -67,7 +73,7 @@ fun LoginScreen(
         )
 
         Text(
-            text = "✨ Smart Social Media Awareness",
+            text = "Smart Social Media Awareness",
             color = Color(0xFF6B5CFF),
             fontSize = 14.sp
         )
@@ -79,19 +85,24 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(26.dp)
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White.copy(alpha = 0.9f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
-            Column(modifier = Modifier.padding(22.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
 
                 Text(
                     text = "Welcome Back",
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2B2B2B)
                 )
 
                 Text(
                     text = "Sign in to your account",
-                    color = Color.Gray
+                    color = Color(0xFF6B6B6B)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -100,7 +111,8 @@ fun LoginScreen(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email *") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -110,7 +122,8 @@ fun LoginScreen(
                     onValueChange = { password = it },
                     label = { Text("Password *") },
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -124,12 +137,39 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage ?: "",
+                        color = Color(0xFFD32F2F),
+                        fontSize = 13.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Button(
-                    onClick = onSignIn,
+                    onClick = {
+                        if (email.isBlank() || password.isBlank()) {
+                            errorMessage = "Please enter email and password"
+                            return@Button
+                        }
+                        isLoading = true
+                        errorMessage = null
+                        userViewModel.login(email, password) { success, message ->
+                            isLoading = false
+                            if (success) {
+                                onSignIn()
+                            } else {
+                                errorMessage = message ?: "Login failed"
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !isLoading
                 ) {
-                    Text("Sign In", fontSize = 16.sp)
+                    Text(if (isLoading) "Signing In..." else "Sign In", fontSize = 16.sp)
                 }
             }
         }

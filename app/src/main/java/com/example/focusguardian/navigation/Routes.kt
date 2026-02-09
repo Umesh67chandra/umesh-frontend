@@ -27,4 +27,5 @@ object Routes {
     const val WALLPAPER = "wallpaper"
     const val PROFILE_SETTINGS = "profile_settings"
     const val MANAGE_APPS = "manage_apps"
+    const val TIME_USED = "time_used"
 }

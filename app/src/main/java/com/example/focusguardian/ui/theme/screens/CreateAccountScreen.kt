@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,6 +35,8 @@ fun CreateAccountScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold {
         Column(
@@ -51,17 +54,18 @@ fun CreateAccountScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 🔹 LOGO (UNCHANGED)
+            // 🔹 LOGO
             Image(
                 painter = painterResource(R.drawable.ic_focus_guardian_logo),
                 contentDescription = "Logo",
-                modifier = Modifier.size(80.dp)
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(140.dp)
             )
 
             Spacer(Modifier.height(12.dp))
 
             Text("Focus Guardian", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-            Text("✨ Smart Social Media Awareness", color = Color(0xFF6B5CFF))
+            Text("Smart Social Media Awareness", color = Color(0xFF6B5CFF))
 
             Spacer(Modifier.height(24.dp))
 
@@ -143,14 +147,35 @@ fun CreateAccountScreen(
 
                         Button(
                             onClick = {
-                                userViewModel.name = name
-                                userViewModel.email = email
-                                onCreateAccount()
+                                if (name.isBlank() || email.isBlank() || password.isBlank()) {
+                                    errorMessage = "Please fill all required fields"
+                                    return@Button
+                                }
+                                isLoading = true
+                                errorMessage = null
+                                userViewModel.registerUser(name, email, password) { success, message ->
+                                    isLoading = false
+                                    if (success) {
+                                        onCreateAccount()
+                                    } else {
+                                        errorMessage = message ?: "Account creation failed"
+                                    }
+                                }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            enabled = !isLoading
                         ) {
-                            Text("Create Account")
+                            Text(if (isLoading) "Creating..." else "Create Account")
                         }
+                    }
+
+                    if (errorMessage != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFD32F2F),
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }

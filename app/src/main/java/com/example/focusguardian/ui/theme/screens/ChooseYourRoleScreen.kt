@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -19,14 +23,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.focusguardian.R
+import com.example.focusguardian.viewmodel.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChooseYourRoleScreen(
     navController: NavController,
+    userViewModel: UserViewModel,
     onRoleSelected: (String) -> Unit,
     onSignIn: () -> Unit
 ) {
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     Scaffold {
         Column(
             modifier = Modifier
@@ -53,7 +61,7 @@ fun ChooseYourRoleScreen(
             Spacer(Modifier.height(12.dp))
 
             Text("Focus Guardian", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-            Text("✨ Smart Social Media Awareness", color = Color(0xFF6B5CFF))
+            Text("Smart Social Media Awareness", color = Color(0xFF6B5CFF))
 
             Spacer(Modifier.height(24.dp))
 
@@ -84,19 +92,61 @@ fun ChooseYourRoleScreen(
                         title = "Child",
                         subtitle = "Under 13 years old with parental controls",
                         color = Color(0xFFFF4D9D)
-                    ) { onRoleSelected("child") }
+                    ) {
+                        isLoading = true
+                        errorMessage = null
+                        userViewModel.updateRole("child") { success, message ->
+                            isLoading = false
+                            if (success) {
+                                onRoleSelected("child")
+                            } else {
+                                errorMessage = message ?: "Failed to update role"
+                            }
+                        }
+                    }
 
                     RoleCard(
                         title = "Adult",
                         subtitle = "Independent user managing personal wellness",
                         color = Color(0xFF5B6CFF)
-                    ) { onRoleSelected("adult") }
+                    ) {
+                        isLoading = true
+                        errorMessage = null
+                        userViewModel.updateRole("adult") { success, message ->
+                            isLoading = false
+                            if (success) {
+                                onRoleSelected("adult")
+                            } else {
+                                errorMessage = message ?: "Failed to update role"
+                            }
+                        }
+                    }
 
                     RoleCard(
                         title = "Parent",
                         subtitle = "Monitor and guide family digital health",
                         color = Color(0xFF18B37E)
-                    ) { onRoleSelected("parent") }
+                    ) {
+                        isLoading = true
+                        errorMessage = null
+                        userViewModel.updateRole("parent") { success, message ->
+                            isLoading = false
+                            if (success) {
+                                onRoleSelected("parent")
+                            } else {
+                                errorMessage = message ?: "Failed to update role"
+                            }
+                        }
+                    }
+
+                    if (errorMessage != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFD32F2F),
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 

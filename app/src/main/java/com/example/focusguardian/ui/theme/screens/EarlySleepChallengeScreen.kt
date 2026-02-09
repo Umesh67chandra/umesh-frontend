@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -12,9 +12,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import kotlinx.coroutines.delay
 
 @Composable
-fun EarlySleepChallengeScreen() {
+fun EarlySleepChallengeScreen(navController: NavController) {
+    val totalSeconds = 8 * 60 * 60
+    var remainingSeconds by remember { mutableStateOf(totalSeconds) }
+    var isRunning by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isRunning) {
+        while (isRunning && remainingSeconds > 0) {
+            delay(1000)
+            remainingSeconds -= 1
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -83,7 +95,7 @@ fun EarlySleepChallengeScreen() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "7h 59m",
+                    text = formatHoursMinutes(remainingSeconds),
                     color = Color.White,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
@@ -98,7 +110,7 @@ fun EarlySleepChallengeScreen() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 LinearProgressIndicator(
-                    progress = 0.1f,
+                    progress = 1f - (remainingSeconds / totalSeconds.toFloat()),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp),
@@ -109,7 +121,10 @@ fun EarlySleepChallengeScreen() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 OutlinedButton(
-                    onClick = {},
+                    onClick = {
+                        isRunning = false
+                        navController.popBackStack()
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = Color.White.copy(alpha = 0.2f)
                     ),
@@ -179,6 +194,12 @@ fun EarlySleepChallengeScreen() {
             }
         }
     }
+}
+
+private fun formatHoursMinutes(seconds: Int): String {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    return "${hours}h ${minutes}m"
 }
 
 @Composable
