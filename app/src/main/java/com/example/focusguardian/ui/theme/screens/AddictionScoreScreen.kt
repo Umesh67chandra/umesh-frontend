@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShowChart
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,11 +13,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.focusguardian.viewmodel.AppUsageViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddictionScoreScreen(navController: NavController) {
+fun AddictionScoreScreen(navController: NavController, appUsageViewModel: AppUsageViewModel = viewModel()) {
+
+    val totalTimeUsed = appUsageViewModel.totalTimeUsedMinutes.toFloat()
+    val totalLimit = appUsageViewModel.totalDailyLimitMinutes.toFloat()
+
+    val score = if (totalLimit > 0) {
+        (totalTimeUsed / totalLimit).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+    val scorePercentage = (score * 100).toInt()
+
+    val scoreColor = when {
+        scorePercentage <= 33 -> Color(0xFF22C55E) // Green
+        scorePercentage <= 66 -> Color(0xFFFACC15) // Yellow
+        else -> Color(0xFFEF4444) // Red
+    }
 
     Column(
         modifier = Modifier
@@ -56,17 +72,17 @@ fun AddictionScoreScreen(navController: NavController) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        progress = { 0.29f },
+                        progress = { score },
                         modifier = Modifier.size(120.dp),
-                        color = Color(0xFF22C55E),
+                        color = scoreColor,
                         strokeWidth = 8.dp
                     )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "29",
+                            text = scorePercentage.toString(),
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF22C55E)
+                            color = scoreColor
                         )
                         Text("SCORE", color = Color.Black)
                     }

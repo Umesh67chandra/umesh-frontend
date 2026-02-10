@@ -1,50 +1,95 @@
 package com.example.focusguardian.ui.theme.screens
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.*
-import androidx.compose.ui.graphics.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.focusguardian.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
-fun SplashScreen(onGetStarted: () -> Unit) {
-    Column(
+fun SplashScreen(onTimeout: () -> Unit) {
+    val alpha = remember { Animatable(0f) }
+    val scale = remember { Animatable(0.5f) }
+
+    LaunchedEffect(Unit) {
+        launch {
+            alpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 800)
+            )
+        }
+        launch {
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        }
+        delay(2500)
+        onTimeout()
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFFDAD6FF), Color(0xFFEEDCFF))
+                    listOf(
+                        Color(0xFFE3DFFF),
+                        Color(0xFFF7EFFF)
+                    )
                 )
             ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        contentAlignment = Alignment.Center
     ) {
-
-        Spacer(Modifier.height(40.dp))
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(R.drawable.ic_focus_guardian_logo),
-                contentDescription = "Logo",
-                modifier = Modifier.size(90.dp)
-            )
-            Spacer(Modifier.height(16.dp))
-            Text("Focus Guardian", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("✨ Smart Social Media Awareness", color = Color(0xFF6B5CFF))
-        }
-
-        Button(
-            onClick = onGetStarted,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
+                .scale(scale.value)
+                .alpha(alpha.value)
         ) {
-            Text("Get Started")
+            Image(
+                painter = painterResource(id = R.drawable.ic_focus_guardian_logo),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(120.dp)
+            )
+            Text(
+                text = "Focus Guardian",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Text(
+                text = "✨ Smart Social Media Awareness",
+                color = Color(0xFF6B5CFF),
+                fontSize = 16.sp
+            )
         }
     }
 }

@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.focusguardian.R
-import com.example.focusguardian.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,21 +27,10 @@ fun ChooseYourRoleScreen(
     onRoleSelected: (String) -> Unit,
     onSignIn: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Focus Guardian") },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Routes.DASHBOARD) }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Dashboard")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    Scaffold {
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(it)
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(

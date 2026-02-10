@@ -14,7 +14,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.focusguardian.viewmodel.AppUsageViewModel
 
-data class AppUsageInfo(val name: String, val usageLimitInMinutes: Int, val timeUsedInMinutes: Int)
+data class AppUsageInfo(
+    val packageName: String,
+    val label: String,
+    val usageLimitInMinutes: Int,
+    val timeUsedInMinutes: Int
+)
 
 @Composable
 fun ManageAppsScreen(appUsageViewModel: AppUsageViewModel) {
@@ -28,7 +33,13 @@ fun ManageAppsScreen(appUsageViewModel: AppUsageViewModel) {
             onDismiss = { showDialog = false },
             onSave = { hours, minutes ->
                 val limitInMinutes = hours * 60 + minutes
-                appUsageViewModel.appLimits[selectedApp!!] = AppUsageInfo(selectedApp!!, limitInMinutes, 0) // Initialize with 0 time used
+                // For now, using the app name as packageName since we don't have real package names here
+                appUsageViewModel.appLimits[selectedApp!!] = AppUsageInfo(
+                    packageName = selectedApp!!,
+                    label = selectedApp!!,
+                    usageLimitInMinutes = limitInMinutes,
+                    timeUsedInMinutes = 0
+                ) 
                 showDialog = false
             }
         )

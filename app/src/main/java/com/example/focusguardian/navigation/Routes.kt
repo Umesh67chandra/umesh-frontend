@@ -15,6 +15,7 @@ object Routes {
     const val SLEEP = "sleep"
     const val CHALLENGES = "challenges"
     const val ANALYTICS = "analytics"
+    const val TIME_USED = "time_used"
     const val NOTIFICATIONS = "notifications"
     const val NO_SCROLL = "no_scroll"
     const val DEEP_FOCUS = "deep_focus"

@@ -19,13 +19,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.focusguardian.R
 
+import com.example.focusguardian.viewmodel.UserViewModel
+
 @Composable
 fun LoginScreen(
+    userViewModel: UserViewModel,
     onSignIn: () -> Unit,
     onCreateAccount: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loginError by remember { mutableStateOf<String?>(null) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
 
     if (showForgotPasswordDialog) {
@@ -124,11 +128,36 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = onSignIn,
+                    onClick = {
+                        if (email.isBlank() || password.isBlank()) {
+                            loginError = "Please enter email and password"
+                        } else {
+                            userViewModel.login(
+                                emailInput = email.trim(),
+                                passwordInput = password,
+                                onSuccess = {
+                                    loginError = null
+                                    onSignIn()
+                                },
+                                onError = { error ->
+                                    loginError = error
+                                }
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Sign In", fontSize = 16.sp)
+                }
+                
+                if (loginError != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = loginError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
@@ -203,7 +232,7 @@ private fun ForgotPasswordDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = { /* TODO: Handle password reset */ }) {
+            Button(onClick = onDismiss) {
                 Text("Send")
             }
         },

@@ -35,9 +35,18 @@ fun AppNavGraph(
 
         composable(Routes.LOGIN) {
             LoginScreen(
+                userViewModel = userViewModel,
                 onSignIn = {
-                    navController.navigate(Routes.MAIN) { // Navigate to the Main App Graph
-                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    // After signing in, if the role is not set, go to role selection.
+                    // Otherwise, go to the main dashboard.
+                    if (userViewModel.role == null) {
+                        navController.navigate(Routes.ROLE) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Routes.MAIN) { // Navigate to the Main App Graph
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
                     }
                 },
                 onCreateAccount = {
@@ -52,7 +61,10 @@ fun AppNavGraph(
                 userViewModel = userViewModel,
                 onBack = { navController.popBackStack() },
                 onCreateAccount = {
-                    navController.navigate(Routes.LOGIN)
+                    // After creating an account, go to role selection.
+                    navController.navigate(Routes.ROLE) {
+                        popUpTo(Routes.CREATE) { inclusive = true }
+                    }
                 }
             )
         }
@@ -60,7 +72,10 @@ fun AppNavGraph(
         composable(Routes.ROLE) {
             ChooseYourRoleScreen(
                 navController = navController,
-                onRoleSelected = { navController.navigate(Routes.INTEREST) },
+                onRoleSelected = {
+                    // After selecting a role, go to interest selection.
+                    navController.navigate(Routes.INTEREST)
+                },
                 onSignIn = { navController.navigate(Routes.LOGIN) }
             )
         }
@@ -69,6 +84,7 @@ fun AppNavGraph(
             InterestSelectionScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { interests: Set<String> ->
+                    // After selecting interests, go to refine interests.
                     val interestsString = interests.joinToString(",")
                     navController.navigate("${Routes.REFINE_INTEREST}/$interestsString")
                 }
@@ -81,7 +97,9 @@ fun AppNavGraph(
                 interests = interests,
                 onBack = { navController.popBackStack() },
                 onContinue = {
+                    // After refining interests, the onboarding is complete. Go to the main dashboard.
                     navController.navigate(Routes.MAIN) {
+                        // Clear the entire auth flow from the back stack.
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 }
@@ -91,10 +109,10 @@ fun AppNavGraph(
         // Main App Navigation Graph (Nested)
         navigation(startDestination = Routes.DASHBOARD, route = Routes.MAIN) {
             composable(Routes.DASHBOARD) {
-                DashboardScreen(navController, appUsageViewModel)
+                DashboardScreen(navController, appUsageViewModel, userViewModel)
             }
             composable(Routes.ADDICTION_SCORE) {
-                AddictionScoreScreen(navController)
+                AddictionScoreScreen(navController, appUsageViewModel)
             }
             composable(Routes.SLEEP) {
                 SleepCycleScreen(navController)
@@ -104,6 +122,9 @@ fun AppNavGraph(
             }
             composable(Routes.ANALYTICS) {
                 AnalyticsScreen(navController)
+            }
+            composable(Routes.TIME_USED) {
+                TimeUsedScreen(navController, appUsageViewModel)
             }
             composable(Routes.NOTIFICATIONS) {
                 NotificationsScreen(navController)

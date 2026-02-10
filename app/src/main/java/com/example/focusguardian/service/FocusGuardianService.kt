@@ -6,20 +6,30 @@ import android.view.accessibility.AccessibilityEvent
 class FocusGuardianService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // This method is called whenever an accessibility event occurs.
-        // You can inspect the event to determine the source of the content
-        // and take action accordingly.
+        if (event == null) return
 
-        // TODO: Add logic to detect 18+ content and block it.
-        // This could involve checking the text content of the screen
-        // or the package name of the app that generated the event.
+        // Basic keyword blocking for 18+ content
+        val blockedKeywords = listOf(
+            "porn", "xxx", "sex", "nude", "erotic", "adult", "18+"
+        )
 
-        // TODO: Add logic to detect video playback and pause it.
-        // This could involve checking for a video player view in the view
-        // hierarchy and then programmatically pausing it.
+        val text = event.text.joinToString(" ").lowercase()
+        val contentDesc = event.contentDescription?.toString()?.lowercase() ?: ""
+        
+        val detected = blockedKeywords.any { keyword ->
+            text.contains(keyword) || contentDesc.contains(keyword)
+        }
+
+        if (detected) {
+            // Block action: Go Home
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            
+            // Optionally show a toast (need a Handler for Toast on main thread)
+            // But for now, silent block is fine or maybe improved later.
+        }
     }
 
     override fun onInterrupt() {
-        // This method is called when the service is interrupted.
+        // Service interrupted
     }
 }
