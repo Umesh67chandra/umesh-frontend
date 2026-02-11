@@ -141,6 +141,7 @@ fun LoginScreen(
                                 },
                                 onError = { error ->
                                     loginError = error
+                                    android.util.Log.e("LoginScreen", "Login failed: $error")
                                 }
                             )
                         }

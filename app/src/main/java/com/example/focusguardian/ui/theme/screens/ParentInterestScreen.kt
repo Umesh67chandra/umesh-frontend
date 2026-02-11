@@ -1,39 +1,176 @@
 package com.example.focusguardian.ui.theme.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.focusguardian.R
+import com.example.focusguardian.viewmodel.UserViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ParentInterestScreen(
+    userViewModel: UserViewModel,
+    onBack: () -> Unit,
+    onContinue: () -> Unit
+) {
+    var selectedInterests by remember { mutableStateOf(setOf<String>()) }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    fun onInterestClick(interest: String) {
+        selectedInterests = if (selectedInterests.contains(interest)) {
+            selectedInterests - interest
+        } else {
+            selectedInterests + interest
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFFD6FFEB), Color(0xFFF0FFF8)) // Greenish theme for Parent
+                    )
+                )
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Spacer(Modifier.height(24.dp))
+
+            Image(
+                painter = painterResource(R.drawable.ic_focus_guardian_logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(80.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Text("Focus Guardian", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text("✨ Smart Social Media Awareness", color = Color(0xFF6B5CFF))
+
+            Spacer(Modifier.height(24.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(26.dp)
+            ) {
+                Column(Modifier.padding(22.dp)) {
+
+                    Text(
+                        "Parental Focus",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Select topics for your family",
+                        color = Color.Gray,
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    CategoryRow("Parenting", "Education", selectedInterests, ::onInterestClick)
+                    CategoryRow("Cooking", "Health", selectedInterests, ::onInterestClick)
+                    CategoryRow("Family Activities", "Technology", selectedInterests, ::onInterestClick)
+                    CategoryRow("Finance", "Travel", selectedInterests, ::onInterestClick)
+
+                    Spacer(Modifier.height(20.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+                            Text("Back")
+                        }
+                        Button(
+                            onClick = {
+                                isLoading = true
+                                userViewModel.savePreferences(
+                                    interests = selectedInterests.toList(),
+                                    onSuccess = {
+                                        isLoading = false
+                                        onContinue()
+                                    },
+                                    onError = {
+                                        isLoading = false
+                                        android.widget.Toast.makeText(context, "Failed to save: $it", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = selectedInterests.isNotEmpty()
+                        ) {
+                            Text("Continue")
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(40.dp))
+        }
+    }
+}
 
 @Composable
-fun ParentInterestScreen(onBack: () -> Unit, onContinue: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun CategoryRow(
+    a: String, 
+    b: String, 
+    selectedInterests: Set<String>, 
+    onInterestClick: (String) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        CategoryCard(
+            text = a, 
+            modifier = Modifier.weight(1f), 
+            isSelected = selectedInterests.contains(a)
+        ) { onInterestClick(a) }
+        CategoryCard(
+            text = b, 
+            modifier = Modifier.weight(1f),
+            isSelected = selectedInterests.contains(b)
+        ) { onInterestClick(b) }
+    }
+    Spacer(Modifier.height(12.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryCard(
+    text: String, 
+    modifier: Modifier, 
+    isSelected: Boolean, 
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(14.dp),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFF18B37E) else Color.White,
+            contentColor = if (isSelected) Color.White else Color.Black
+        )
     ) {
-        Text("Parent Interests")
-        Spacer(modifier = Modifier.height(16.dp))
-        // Add parent-specific interests here
-        Row {
-            OutlinedButton(onClick = onBack) {
-                Text("Back")
-            }
-            Button(onClick = onContinue) {
-                Text("Continue")
-            }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text)
         }
     }
 }

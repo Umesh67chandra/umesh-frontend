@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -24,10 +26,35 @@ import com.example.focusguardian.R
 @Composable
 fun ChooseYourRoleScreen(
     navController: NavController,
+    userViewModel: com.example.focusguardian.viewmodel.UserViewModel,
     onRoleSelected: (String) -> Unit,
     onSignIn: () -> Unit
 ) {
-    Scaffold {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var isLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    fun selectRole(role: String) {
+        isLoading = true
+        userViewModel.updateRole(
+            roleInput = role,
+            onSuccess = {
+                isLoading = false
+                onRoleSelected(role)
+            },
+            onError = {
+                isLoading = false
+                android.widget.Toast.makeText(context, "Failed to update role: $it", android.widget.Toast.LENGTH_SHORT).show()
+                // Optional: Allow navigation anyway or block? Blocking is safer for data consistency.
+            }
+        )
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        Scaffold {
         Column(
             modifier = Modifier
                 .padding(it)
@@ -84,19 +111,19 @@ fun ChooseYourRoleScreen(
                         title = "Child",
                         subtitle = "Under 13 years old with parental controls",
                         color = Color(0xFFFF4D9D)
-                    ) { onRoleSelected("child") }
+                    ) { selectRole("child") }
 
                     RoleCard(
                         title = "Adult",
                         subtitle = "Independent user managing personal wellness",
                         color = Color(0xFF5B6CFF)
-                    ) { onRoleSelected("adult") }
+                    ) { selectRole("adult") }
 
                     RoleCard(
                         title = "Parent",
                         subtitle = "Monitor and guide family digital health",
                         color = Color(0xFF18B37E)
-                    ) { onRoleSelected("parent") }
+                    ) { selectRole("parent") }
                 }
             }
 
@@ -142,6 +169,7 @@ fun ChooseYourRoleScreen(
                 }
             }
         }
+    }
     }
 }
 

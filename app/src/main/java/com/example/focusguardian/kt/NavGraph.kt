@@ -61,8 +61,13 @@ fun AppNavGraph(
                 userViewModel = userViewModel,
                 onBack = { navController.popBackStack() },
                 onCreateAccount = {
-                    // After creating an account, go to role selection.
-                    navController.navigate(Routes.ROLE) {
+                    // Account created and token stored. Proceed to Role Selection logic.
+                    // Note: If we want to force login, we go to LOGIN. 
+                    // But since register() logs us in, we can direct to ROLE.
+                    // However, original request said "Enter correct details it is shoing invalid credentials"
+                    // implies they were forced to login. 
+                    // Let's improve flow: Go to ROLE directly.
+                     navController.navigate(Routes.ROLE) {
                         popUpTo(Routes.CREATE) { inclusive = true }
                     }
                 }
@@ -72,11 +77,40 @@ fun AppNavGraph(
         composable(Routes.ROLE) {
             ChooseYourRoleScreen(
                 navController = navController,
-                onRoleSelected = {
-                    // After selecting a role, go to interest selection.
-                    navController.navigate(Routes.INTEREST)
+                userViewModel = userViewModel,
+                onRoleSelected = { role ->
+                    when (role) {
+                        "child" -> navController.navigate(Routes.CHILD_INTEREST)
+                        "adult" -> navController.navigate(Routes.ADULT_INTEREST)
+                        "parent" -> navController.navigate(Routes.PARENT_INTEREST)
+                        else -> navController.navigate(Routes.INTEREST) // Fallback
+                    }
                 },
                 onSignIn = { navController.navigate(Routes.LOGIN) }
+            )
+        }
+
+        composable(Routes.CHILD_INTEREST) {
+            ChildInterestScreen(
+                userViewModel = userViewModel,
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.MAIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
+            )
+        }
+
+        composable(Routes.ADULT_INTEREST) {
+            AdultInterestScreen(
+                userViewModel = userViewModel,
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.MAIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
+            )
+        }
+
+        composable(Routes.PARENT_INTEREST) {
+            ParentInterestScreen(
+                userViewModel = userViewModel,
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.MAIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
             )
         }
 
@@ -84,7 +118,7 @@ fun AppNavGraph(
             InterestSelectionScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { interests: Set<String> ->
-                    // After selecting interests, go to refine interests.
+                    // Legacy flow, maybe update or keep as is for generic fallback
                     val interestsString = interests.joinToString(",")
                     navController.navigate("${Routes.REFINE_INTEREST}/$interestsString")
                 }
@@ -127,7 +161,7 @@ fun AppNavGraph(
                 TimeUsedScreen(navController, appUsageViewModel)
             }
             composable(Routes.NOTIFICATIONS) {
-                NotificationsScreen(navController)
+                NotificationsScreen(navController, appUsageViewModel)
             }
             composable(Routes.WALLPAPER) {
                 SmartWallpaperScreen()

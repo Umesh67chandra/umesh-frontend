@@ -42,6 +42,11 @@ class AppUsageViewModel : ViewModel() {
 
     fun refreshUsageTimes(context: Context) {
         if (!hasUsageAccess(context)) {
+            totalDeviceUsageMinutes = 0
+            appLimits.entries.forEach { entry ->
+                appLimits[entry.key] = entry.value.copy(timeUsedInMinutes = 0)
+            }
+
             addAlertIfMissing(
                 context = context,
                 type = "USAGE_ACCESS",
@@ -131,31 +136,28 @@ class AppUsageViewModel : ViewModel() {
         val startDay = calendar.timeInMillis
         val now = System.currentTimeMillis()
 
-        fun sumUsage(start: Long, end: Long): Int {
-            val stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                start,
-                end
-            )
-            if (stats.isNullOrEmpty()) return 0
-            return (stats.sumOf { it.totalTimeInForeground } / 60000L).toInt()
-        }
-
-        val totalUsageMinutes = sumUsage(startDay, now)
+        // Use the shared event-based calculation
+        val usageMap = calculateUsageFromEvents(context, startDay, now)
+        val totalUsageMinutes = if (usageMap.isEmpty()) 0 else (usageMap.values.sum() / 60000L).toInt()
 
         // Late night usage: 10 PM - 12 AM and 12 AM - 6 AM
         val lateNightMinutes = run {
             val midnight = startDay
             val sixAm = midnight + 6 * 60 * 60 * 1000L
             val tenPm = midnight + 22 * 60 * 60 * 1000L
-            var total = 0
+            var total = 0L
+
             if (now > midnight) {
-                total += sumUsage(midnight, minOf(now, sixAm))
+                // Calculate specifically for the early morning window
+                val earlyMap = calculateUsageFromEvents(context, midnight, minOf(now, sixAm))
+                total += earlyMap.values.sum()
             }
             if (now > tenPm) {
-                total += sumUsage(tenPm, now)
+                // Calculate for the late night window
+                val lateMap = calculateUsageFromEvents(context, tenPm, now)
+                total += lateMap.values.sum()
             }
-            total
+            (total / 60000L).toInt()
         }
 
         val usageEvents = usageStatsManager.queryEvents(startDay, now)
@@ -198,8 +200,6 @@ class AppUsageViewModel : ViewModel() {
     suspend fun getUsageTrend(context: Context, days: Int = 7): List<DailyUsage> = withContext(Dispatchers.Default) {
         if (!hasUsageAccess(context)) return@withContext emptyList()
 
-        val usageStatsManager =
-            context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -213,6 +213,7 @@ class AppUsageViewModel : ViewModel() {
         for (i in days - 1 downTo 0) {
             val dayStart = cal.timeInMillis - i * 24L * 60L * 60L * 1000L
             val dayEnd = dayStart + 24L * 60L * 60L * 1000L
+            // calculateUsageFromEvents now handles precision
             val usageMap = calculateUsageFromEvents(context, dayStart, dayEnd)
             val totalMinutes = if (usageMap.isEmpty()) 0 else (usageMap.values.sum() / 60000L).toInt()
             val percent = percent(totalMinutes, baselineLimit)
@@ -248,28 +249,21 @@ class AppUsageViewModel : ViewModel() {
             (usageMap.values.sum() / 60000L).toInt()
         }
 
+        // Re-use logic for consistency
         val lateNightMinutes = run {
             val midnight = startDay
             val sixAm = midnight + 6 * 60 * 60 * 1000L
             val tenPm = midnight + 22 * 60 * 60 * 1000L
-            var total = 0
+            var total = 0L
             if (now > midnight) {
                 val usageEarly = calculateUsageFromEvents(context, midnight, minOf(now, sixAm))
-                total += if (usageEarly.isEmpty()) {
-                    0
-                } else {
-                    (usageEarly.values.sum() / 60000L).toInt()
-                }
+                 total += usageEarly.values.sum()
             }
             if (now > tenPm) {
                 val usageLate = calculateUsageFromEvents(context, tenPm, now)
-                total += if (usageLate.isEmpty()) {
-                    0
-                } else {
-                    (usageLate.values.sum() / 60000L).toInt()
-                }
+                total += usageLate.values.sum()
             }
-            total
+            (total / 60000L).toInt()
         }
 
         val usageEvents = usageStatsManager.queryEvents(startDay, now)
@@ -307,6 +301,15 @@ class AppUsageViewModel : ViewModel() {
             topApps = topApps
         )
     }
+
+    // ... (Keep other methods like loadLimits, saveLimits etc unchanged) ...
+    // Note: I will only replace the methods I'm changing.
+    // However, since I need to replace calculateUsageFromEvents which is at the bottom,
+    // and potentially others, I'll essentially rewrite the logic block.
+    // Wait, the tool requires a contiguous block.
+    // getAddictionMetrics starts at 125.
+    // calculateUsageFromEvents ends at 433.
+    // I can replace from 125 to 433.
 
     fun loadLimits(context: Context) {
         val prefs = context.getSharedPreferences("focus_guardian_limits", Context.MODE_PRIVATE)
@@ -407,57 +410,72 @@ class AppUsageViewModel : ViewModel() {
     private fun calculateUsageFromEvents(context: Context, startTime: Long, endTime: Long): Map<String, Long> {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-        val event = UsageEvents.Event()
-        val appUsageMap = mutableMapOf<String, Long>()
-        val startTimes = mutableMapOf<String, Long>()
-        val firstEventSeen = mutableSetOf<String>()
+        
+        val usageMap = mutableMapOf<String, Long>()
+        val openEvents = mutableMapOf<String, Long>()
+        val knownPackages = mutableSetOf<String>()
 
+        val event = UsageEvents.Event()
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
-            val packageName = event.packageName ?: continue
+            val pkg = event.packageName
+            val time = event.timeStamp
 
-            // Determine if this is the first event we've seen for this package in this window
-            val isFirstEvent = packageName !in firstEventSeen
-            firstEventSeen.add(packageName)
+            // Filter out system/launcher apps early to save processing but
+            // keep logic inside the loop or filter result later.
+            // Better to filter result later to avoid missing paired events if filter logic changes.
 
-            when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> {
-                    startTimes[packageName] = event.timeStamp
-                }
-                UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED -> {
-                    val start = startTimes.remove(packageName)
-                    if (start != null) {
-                        // Normal case: We saw the resume
-                        if (event.timeStamp > start) {
-                            val duration = event.timeStamp - start
-                            appUsageMap[packageName] = (appUsageMap[packageName] ?: 0L) + duration
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                openEvents[pkg] = time
+                knownPackages.add(pkg)
+            } else if (event.eventType == UsageEvents.Event.ACTIVITY_PAUSED || 
+                       event.eventType == UsageEvents.Event.ACTIVITY_STOPPED) {
+                
+                if (openEvents.containsKey(pkg)) {
+                    val start = openEvents.remove(pkg)!!
+                    val duration = time - start
+                    usageMap[pkg] = (usageMap[pkg] ?: 0L) + duration
+                    knownPackages.add(pkg)
+                } else {
+                    // Ends without a known start in this window.
+                    // Only count this if we HAVEN'T seen this package yet in this window.
+                    // If we have seen it (knownPackages contains pkg), it means we already processed
+                    // a session or a close for it, so this is likely a redundant STOP after PAUSE.
+                    if (!knownPackages.contains(pkg)) {
+                        // Assume it started at 'startTime'
+                        val duration = time - startTime
+                        if (duration > 0) {
+                             usageMap[pkg] = (usageMap[pkg] ?: 0L) + duration
                         }
-                    } else if (isFirstEvent) {
-                        // Orphan PAUSE case: Application was already running at startTime (Midnight Straddle)
-                        // So usage is from startTime to this PAUSE event
-                        if (event.timeStamp > startTime) {
-                            val duration = event.timeStamp - startTime
-                            appUsageMap[packageName] = (appUsageMap[packageName] ?: 0L) + duration
-                        }
+                        knownPackages.add(pkg)
                     }
                 }
             }
         }
 
-        // Handle apps that are currently open (RESUMED but no PAUSED yet)
-        startTimes.forEach { (pkg, start) ->
-            if (endTime > start) {
-                val duration = endTime - start
-                appUsageMap[pkg] = (appUsageMap[pkg] ?: 0L) + duration
+        // Handle open events that haven't closed yet (still running)
+        for ((pkg, start) in openEvents) {
+            val duration = endTime - start
+            if (duration > 0) {
+                usageMap[pkg] = (usageMap[pkg] ?: 0L) + duration
             }
         }
-        
-        // Also handle the edge case where an app was open at startTime and is STILL open at endTime (No events at all!)
-        // This is rare (app open 24h?) but possible. UsageEvents won't show anything.
-        // We can't easily detect this without querying outside the window. 
-        // For now, the Straddle Fix covers the 99% case where user interacts (Resume/Pause).
 
-        return appUsageMap
+        // Now filter the result
+        val finalMap = mutableMapOf<String, Long>()
+        val allLaunchers = getAllLaunchers(context)
+
+        for ((pkg, duration) in usageMap) {
+             if (allLaunchers.contains(pkg)) continue
+             // Skip if no launch intent
+             if (!hasLaunchIntent(context, pkg)) continue
+             
+             if (duration > 0) {
+                 finalMap[pkg] = duration
+             }
+        }
+        
+        return finalMap
     }
 
     private fun buildAlertKey(type: String, appLabel: String?): String {
@@ -491,6 +509,17 @@ class AppUsageViewModel : ViewModel() {
         } catch (ex: Exception) {
             packageName
         }
+    }
+
+    private fun getAllLaunchers(context: Context): List<String> {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+        intent.addCategory(android.content.Intent.CATEGORY_HOME)
+        val resolveInfos = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfos.map { it.activityInfo.packageName }
+    }
+
+    private fun hasLaunchIntent(context: Context, packageName: String): Boolean {
+        return context.packageManager.getLaunchIntentForPackage(packageName) != null
     }
 }
 

@@ -137,9 +137,9 @@ private suspend fun loadUsageRows(
                 val appInfo = pm.getApplicationInfo(packageName, 0)
                 pm.getApplicationLabel(appInfo).toString()
             } catch (ex: Exception) {
-                packageName // Fallback to package name
+                null
             }
-            UsageRow(label, minutes)
+            label?.let { UsageRow(it, minutes) }
         }
         .sortedByDescending { it.minutes }
 }

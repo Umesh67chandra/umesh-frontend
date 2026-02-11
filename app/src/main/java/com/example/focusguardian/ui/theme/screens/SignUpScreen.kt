@@ -26,6 +26,8 @@ fun SignUpScreen(navController: NavController, userViewModel: UserViewModel) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -53,11 +55,30 @@ fun SignUpScreen(navController: NavController, userViewModel: UserViewModel) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {
-            userViewModel.name = name
-            userViewModel.email = email
-            navController.navigate(AuthRoutes.LOGIN)
+            if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
+                isLoading = true
+                errorMessage = null
+                userViewModel.register(
+                    nameInput = name.trim(),
+                    emailInput = email.trim(),
+                    passwordInput = password,
+                    onSuccess = {
+                        isLoading = false
+                        navController.navigate(AuthRoutes.CHOOSE_ROLE)
+                    },
+                    onError = { error ->
+                        isLoading = false
+                        errorMessage = error
+                    }
+                )
+            }
         }) {
-            Text("Create Account")
+            Text(if (isLoading) "Creating Account..." else "Create Account")
+        }
+        
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMessage!!, color = androidx.compose.ui.graphics.Color.Red)
         }
     }
 }

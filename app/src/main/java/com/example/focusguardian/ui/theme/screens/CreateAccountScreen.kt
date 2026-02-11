@@ -35,6 +35,9 @@ fun CreateAccountScreen(
     var password by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
 
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
     Scaffold {
         Column(
             modifier = Modifier
@@ -143,17 +146,48 @@ fun CreateAccountScreen(
 
                         Button(
                             onClick = {
-                                userViewModel.name = name
-                                userViewModel.email = email
-                                onCreateAccount()
+                                if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
+                                    isLoading = true
+                                    errorMessage = null
+                                    userViewModel.register(
+                                        nameInput = name.trim(),
+                                        emailInput = email.trim(),
+                                        passwordInput = password,
+                                        onSuccess = {
+                                            isLoading = false
+                                            onCreateAccount()
+                                        },
+                                        onError = { error ->
+                                            isLoading = false
+                                            errorMessage = error
+                                        }
+                                    )
+                                } else {
+                                    errorMessage = "Please fill all required fields"
+                                }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            enabled = !isLoading
                         ) {
-                            Text("Create Account")
+                            if (isLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                            } else {
+                                Text("Create Account")
+                            }
                         }
                     }
+
+                    if (errorMessage != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
+                    }
                 }
-            }
 
             Spacer(Modifier.height(40.dp))
         }
