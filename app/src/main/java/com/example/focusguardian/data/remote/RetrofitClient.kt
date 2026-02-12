@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    private const val BASE_URL = "http://10.0.2.2/focus-guardian-backend/"
+    private const val BASE_URL = "http://10.194.134.154:5000/"
 
     val api: ApiService by lazy {
 
