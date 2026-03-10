@@ -63,6 +63,10 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    @app.get("/")
+    def home():
+        return jsonify({"message": "FocusGuardian API is running!"})
+
     @app.get("/health")
     def health():
         return jsonify({"status": "ok"})
